@@ -1,0 +1,28 @@
+{
+  "name": "promptv",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "dependencies": {
+    "next": "15.5.25",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@storybook/nextjs-vite": "10.5.10",
+    "@storybook/react": "10.5.10",
+    "@types/node": "22.20.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "storybook": "10.5.10",
+    "vite": "6.0.11",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,48 @@
+.logo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: #f2f0eb;
+  font-size: clamp(1rem, 1.7vw, 1.35rem);
+  font-style: italic;
+  font-weight: 800;
+  font-family: var(--font-poppins), Arial, Helvetica, sans-serif;
+  letter-spacing: -0.06em;
+  line-height: 1;
+  text-transform: lowercase;
+  user-select: none;
+}
+
+.label {
+  display: inline-block;
+  padding-right: 0.22em;
+}
+
+.dot {
+  position: absolute;
+  top: 0.16em;
+  right: -0.08em;
+  width: 0.14em;
+  height: 0.14em;
+  background: var(--accent);
+  animation: blink 1.8s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  55% {
+    opacity: 0.15;
+  }
+
+  75% {
+    opacity: 0.35;
+  }
+}

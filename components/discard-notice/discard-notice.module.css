@@ -1,0 +1,6 @@
+.notice { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 9px; border-top: 1px solid rgba(242, 240, 235, 0.07); animation: noticeIn 160ms ease-out; }
+.notice > span { color: rgba(242, 240, 235, 0.52); font-size: 10px; }
+.notice > div { display: flex; gap: 7px; }
+.notice button { height: 24px; padding: 0 6px; border: 0; border-radius: 3px; background: transparent; color: rgba(242, 240, 235, 0.72); font-size: 10px; cursor: pointer; }
+.notice button:last-child { color: #e7968d; }
+@keyframes noticeIn { from { opacity: 0; } to { opacity: 1; } }

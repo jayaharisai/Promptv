@@ -1,0 +1,59 @@
+from datetime import datetime, timezone
+from uuid import uuid4
+
+from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column
+
+from .database import Base
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+class Workspace(Base):
+    __tablename__ = "workspaces"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    name: Mapped[str] = mapped_column(String(18), unique=True, index=True)
+    description: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class Folder(Base):
+    __tablename__ = "folders"
+    __table_args__ = (UniqueConstraint("workspace_id", "name", name="uq_folder_workspace_name"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(18))
+    description: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class Prompt(Base):
+    __tablename__ = "prompts"
+    __table_args__ = (UniqueConstraint("folder_id", "name", name="uq_prompt_folder_name"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    folder_id: Mapped[str] = mapped_column(ForeignKey("folders.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(30))
+    description: Mapped[str] = mapped_column(String(140), default="")
+    status: Mapped[str] = mapped_column(String(12), default="draft")
+    active_version_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class PromptVersion(Base):
+    __tablename__ = "prompt_versions"
+    __table_args__ = (UniqueConstraint("prompt_id", "number", name="uq_prompt_version_number"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    prompt_id: Mapped[str] = mapped_column(ForeignKey("prompts.id", ondelete="CASCADE"), index=True)
+    number: Mapped[int] = mapped_column()
+    content: Mapped[str] = mapped_column(Text)
+    note: Mapped[str] = mapped_column(String(140), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
