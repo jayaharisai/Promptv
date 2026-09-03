@@ -57,3 +57,20 @@ class PromptVersion(Base):
     content: Mapped[str] = mapped_column(Text)
     note: Mapped[str] = mapped_column(String(140), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class AccessKey(Base):
+    __tablename__ = "access_keys"
+    __table_args__ = (UniqueConstraint("workspace_id", "name", name="uq_access_key_workspace_name"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(32))
+    description: Mapped[str] = mapped_column(String(160))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    token_prefix: Mapped[str] = mapped_column(String(11))
+    token_last4: Mapped[str] = mapped_column(String(4))
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    request_count: Mapped[int] = mapped_column(default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)

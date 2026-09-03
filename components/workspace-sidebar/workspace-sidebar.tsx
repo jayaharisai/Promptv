@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 
 import { Logo } from '../logo';
 import { DiscardNotice } from '../discard-notice';
+import { Skeleton } from '../skeleton';
 import styles from './workspace-sidebar.module.css';
 
 type Workspace = {
@@ -37,6 +38,7 @@ export function WorkspaceSidebar() {
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
   const [isSavingWorkspace, setIsSavingWorkspace] = useState(false);
   const [workspaceError, setWorkspaceError] = useState('');
+  const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(true);
   const titleLength = workspaceName.length;
   const descriptionLength = workspaceDescription.length;
   const isTitleValid = titleLength >= 5 && titleLength <= 18;
@@ -91,9 +93,11 @@ export function WorkspaceSidebar() {
   }, [isCollapsed]);
 
   async function loadWorkspaces() {
+    setIsLoadingWorkspaces(true);
     const response = await fetch('/api/workspaces', { cache: 'no-store' }).catch(() => null);
     if (!response?.ok) {
       setWorkspaceError('Unable to load workspaces. Start the API service and try again.');
+      setIsLoadingWorkspaces(false);
       return;
     }
 
@@ -105,6 +109,7 @@ export function WorkspaceSidebar() {
     const availableWorkspaces = loadedWorkspaces.length > 0 ? loadedWorkspaces : [defaultWorkspace];
     setWorkspaces(availableWorkspaces);
     setActiveWorkspace((current) => availableWorkspaces.find((workspace) => workspace.id === activePayload?.workspaceId || workspace.id === current.id) ?? availableWorkspaces[0]);
+    setIsLoadingWorkspaces(false);
   }
 
   async function selectWorkspace(workspace: Workspace) {
@@ -255,10 +260,11 @@ export function WorkspaceSidebar() {
               type="button"
               className={styles.workspaceButton}
               onClick={() => setIsWorkspaceMenuOpen((value) => !value)}
+              disabled={isLoadingWorkspaces}
               aria-expanded={isWorkspaceMenuOpen}
               aria-haspopup="menu"
             >
-              <span className={styles.workspaceName}>{activeWorkspace.name}</span>
+              {isLoadingWorkspaces ? <Skeleton className={styles.workspaceSkeleton} /> : <span className={styles.workspaceName}>{activeWorkspace.name}</span>}
               <svg className={styles.chevron} viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <path d="m4.5 6.25 3.5 3.5 3.5-3.5" />
               </svg>
@@ -283,7 +289,7 @@ export function WorkspaceSidebar() {
                   </div>
                 </div>
 
-                {workspaces.length === 0 ? <p className={styles.emptyWorkspaces}>No workspaces yet.</p> : workspaces.map((workspace) => (
+                {isLoadingWorkspaces ? <div className={styles.workspaceListSkeleton} aria-hidden="true"><Skeleton /><Skeleton /><Skeleton /></div> : workspaces.length === 0 ? <p className={styles.emptyWorkspaces}>No workspaces yet.</p> : workspaces.map((workspace) => (
                   <div className={styles.dropdownWorkspace} key={workspace.id}>
                     <button
                       type="button"

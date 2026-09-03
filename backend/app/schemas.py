@@ -107,3 +107,65 @@ class PromptVersionRead(BaseModel):
 
 class ActiveVersionUpdate(BaseModel):
     version_id: str
+
+
+class AccessKeyFields(BaseModel):
+    @field_validator("name", "description", mode="before", check_fields=False)
+    @classmethod
+    def strip_text(cls, value: str) -> str:
+        return value.strip() if isinstance(value, str) else value
+
+
+class AccessKeyCreate(AccessKeyFields):
+    name: str = Field(min_length=3, max_length=32)
+    description: str = Field(min_length=10, max_length=160)
+    token: str | None = Field(default=None, min_length=32, max_length=128)
+
+    @field_validator("token")
+    @classmethod
+    def validate_token_prefix(cls, value: str | None) -> str | None:
+        if value is not None and not value.startswith("pk_live_"):
+            raise ValueError("Access keys must start with pk_live_.")
+        return value
+
+
+class AccessKeyUpdate(AccessKeyFields):
+    name: str | None = Field(default=None, min_length=3, max_length=32)
+    description: str | None = Field(default=None, min_length=10, max_length=160)
+
+
+class AccessKeyRead(BaseModel):
+    id: str
+    workspace_id: str
+    name: str
+    description: str
+    token_prefix: str
+    token_last4: str
+    last_used_at: datetime | None
+    request_count: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AccessKeyCreated(AccessKeyRead):
+    token: str
+
+
+class SDKFolderRead(BaseModel):
+    id: str
+    name: str
+    description: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SDKPromptRead(BaseModel):
+    id: str
+    name: str
+    description: str
+    folder: str
+    version: int
+    content: str
+    updated_at: datetime

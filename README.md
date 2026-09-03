@@ -91,8 +91,39 @@ All API routes are under `/api/v1`.
 | Folders | `GET`, `POST /workspaces/{id}/folders`; `GET`, `PATCH`, `DELETE /folders/{id}` |
 | Prompts | `GET`, `POST /folders/{id}/prompts`; `GET`, `PATCH`, `DELETE /prompts/{id}` |
 | Versions | `GET`, `POST /prompts/{id}/versions`; `PATCH /prompts/{id}/active-version` |
+| SDK | `GET /sdk/folders`; `GET /sdk/prompts/{folder_name}/{prompt_name}` |
 
 Folder and prompt lists are cached in Redis and invalidated after every write. PostgreSQL remains the source of truth.
+
+## Python SDK
+
+Access keys let an application read only the folders and **published active prompt versions** in the key's workspace. Create a key in **Access Keys** in the Promptv app and save its one-time displayed value in an environment variable:
+
+```bash
+export PROMPTV_API_KEY="pk_live_..."
+pip install "git+https://github.com/jayaharisai/Promptv.git#subdirectory=sdk/python"
+```
+
+Use the SDK against the local API (or pass your deployed API URL as `base_url`):
+
+```python
+import os
+from promptv import Promptv, PromptvError
+
+promptv = Promptv(api_key=os.environ["PROMPTV_API_KEY"])
+
+for folder in promptv.list_folders():
+    print(folder.name)
+
+try:
+    active_prompt = promptv.get_prompt("Support", "reply")
+    print(active_prompt.content)
+    print(f"Active version: {active_prompt.version}")
+except PromptvError as error:
+    print(error)
+```
+
+`get_prompt(folder, prompt)` always returns the currently selected active version, so applications see a new version as soon as it is activated in Promptv. Draft and archived prompts are intentionally unavailable. The SDK sends the key as `Authorization: Bearer <key>`; direct integrations may instead use an `X-API-Key` header.
 
 ## Testing
 

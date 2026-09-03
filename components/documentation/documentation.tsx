@@ -1,26 +1,24 @@
 import styles from '../../app/docs/page.module.css';
 
-const javaSnippet = `import io.promptv.Promptv;
+const pythonSnippet = `import os
 
-var promptv = Promptv.builder()
-    .apiKey(System.getenv("PROMPTV_API_KEY"))
-    .build();
+from promptv import Promptv, PromptvError
 
-var prompt = promptv.prompts().get("support-reply");
-var result = prompt.render(Map.of(
-    "customer_name", "Maya",
-    "issue", "Unable to reset password"
-));`;
+promptv = Promptv(api_key=os.environ["PROMPTV_API_KEY"])
 
-const apiSnippet = `curl https://api.promptv.dev/v1/prompts/support-reply/render \\
+for folder in promptv.list_folders():
+    print(folder.name)
+
+try:
+    prompt = promptv.get_prompt("Support", "reply")
+    print(prompt.content)
+    print(f"Active version: {prompt.version}")
+except PromptvError as error:
+    print(error)`;
+
+const apiSnippet = `curl http://localhost:8000/api/v1/sdk/prompts/Support/reply \\
   -H "Authorization: Bearer $PROMPTV_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "variables": {
-      "customer_name": "Maya",
-      "issue": "Unable to reset password"
-    }
-  }'`;
+  -H "Accept: application/json"`;
 
 export function Documentation() {
   return (
@@ -67,9 +65,9 @@ export function Documentation() {
             <p>Start with a workspace, then turn a repeatable instruction into a prompt.</p>
             <ol className={styles.steps}>
               <li><strong>Create a workspace.</strong> Use a workspace for each product or team.</li>
-              <li><strong>Add a prompt.</strong> Give it a clear name, content, and variables.</li>
-              <li><strong>Test the output.</strong> Try realistic values before connecting your app.</li>
-              <li><strong>Connect your client.</strong> Fetch and render the prompt at runtime.</li>
+              <li><strong>Add a prompt.</strong> Give it a clear name and content.</li>
+              <li><strong>Publish a version.</strong> Select the active version your application should receive.</li>
+              <li><strong>Connect your client.</strong> Create an access key and fetch the active prompt at runtime.</li>
             </ol>
           </section>
 
@@ -77,9 +75,9 @@ export function Documentation() {
             <p className={styles.sectionNumber}>03</p>
             <h2>Use Promptv in your client application</h2>
             <p>
-              Your application asks Promptv for a named prompt, supplies its variables, and
-              receives the final text ready for your AI provider. This keeps business logic in
-              your app and prompt content easy for your team to improve.
+              Create an access key in the Access Keys page, then use it from your server to list
+              folders and fetch a named prompt. Promptv returns the selected active version, so
+              your team can update prompt content without changing application code.
             </p>
             <div className={styles.callout}>
               <span>Tip</span>
@@ -87,22 +85,30 @@ export function Documentation() {
             </div>
           </section>
 
-          <section id="java">
+          <section id="python">
             <p className={styles.sectionNumber}>04</p>
-            <h2>Java quick start</h2>
-            <p>Use the Java client in a Spring Boot service, a worker, or any JVM application.</p>
+            <h2>Python quick start</h2>
+            <p>
+              Install the SDK with <code>pip install "git+https://github.com/jayaharisai/Promptv.git#subdirectory=sdk/python"</code>,
+              set your <code> PROMPTV_API_KEY</code> environment variable, and use it in any
+              Python server or worker.
+            </p>
             <div className={styles.codeBlock}>
-              <div className={styles.codeHeader}><span>Example.java</span><span>Java</span></div>
-              <pre><code>{javaSnippet}</code></pre>
+              <div className={styles.codeHeader}><span>example.py</span><span>Python</span></div>
+              <pre><code>{pythonSnippet}</code></pre>
             </div>
           </section>
 
           <section id="api">
             <p className={styles.sectionNumber}>05</p>
             <h2>API example</h2>
-            <p>Every prompt can be rendered through the API using its stable name and a variables object.</p>
+            <p>
+              The SDK uses this read-only endpoint under the hood. It returns a prompt only when
+              it is published and has an active version. You can also send the key in the
+              <code> X-API-Key</code> header.
+            </p>
             <div className={styles.codeBlock}>
-              <div className={styles.codeHeader}><span>Render a prompt</span><span>cURL</span></div>
+              <div className={styles.codeHeader}><span>Get an active prompt</span><span>cURL</span></div>
               <pre><code>{apiSnippet}</code></pre>
             </div>
           </section>
@@ -113,7 +119,7 @@ export function Documentation() {
           <a href="#about">What is Promptv?</a>
           <a href="#quickstart">How to use it</a>
           <a href="#client-app">Client applications</a>
-          <a href="#java">Java quick start</a>
+          <a href="#python">Python quick start</a>
           <a href="#api">API example</a>
         </aside>
       </div>

@@ -1,0 +1,3 @@
+.skeleton { display: block; border-radius: 3px; background: linear-gradient(90deg, rgba(242, 240, 235, 0.055) 20%, rgba(242, 240, 235, 0.11) 50%, rgba(242, 240, 235, 0.055) 80%); background-size: 220% 100%; animation: shimmer 1.35s ease-in-out infinite; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -120% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { Skeleton } from '../skeleton';
 import styles from './prompt-editor.module.css';
 
 type PromptVersion = {
@@ -50,13 +51,17 @@ export function PromptEditor({ folder, prompt, isCreating = false }: PromptEdito
   const [promptId, setPromptId] = useState(isCreating ? '' : prompt);
   const [isSaving, setIsSaving] = useState(false);
   const [editorError, setEditorError] = useState('');
+  const [isLoadingPrompt, setIsLoadingPrompt] = useState(!isCreating);
   const variables = Array.from(new Set(content.match(/{{\s*[a-zA-Z_][a-zA-Z0-9_]*\s*}}/g) ?? []));
   const isRephrasing = rephrasePhase !== 'idle';
   const isVersionDirty = content !== (selectedVersion?.content ?? '');
   const isNewPrompt = isCreating;
 
   useEffect(() => {
-    if (isCreating) return;
+    if (isCreating) {
+      setIsLoadingPrompt(false);
+      return;
+    }
 
     async function loadPrompt() {
       const [promptResponse, versionsResponse] = await Promise.all([
@@ -65,6 +70,7 @@ export function PromptEditor({ folder, prompt, isCreating = false }: PromptEdito
       ]);
       if (!promptResponse?.ok || !versionsResponse?.ok) {
         setEditorError('Unable to load this prompt.');
+        setIsLoadingPrompt(false);
         return;
       }
       const loadedPrompt = await promptResponse.json() as PromptRecord;
@@ -78,6 +84,7 @@ export function PromptEditor({ folder, prompt, isCreating = false }: PromptEdito
       setSelectedVersionId(selected?.id ?? '');
       setActiveVersionId(loadedPrompt.active_version_id ?? '');
       setContent(selected?.content ?? '');
+      setIsLoadingPrompt(false);
     }
 
     void loadPrompt();
@@ -200,6 +207,21 @@ export function PromptEditor({ folder, prompt, isCreating = false }: PromptEdito
       return;
     }
     router.push(`/prompts/${folder}`);
+  }
+
+  if (isLoadingPrompt) {
+    return (
+      <section className={styles.page} aria-label="Loading prompt editor">
+        <header className={styles.header}>
+          <div className={styles.editorSkeletonHeader}><Skeleton className={styles.breadcrumbSkeleton} /><Skeleton className={styles.inputSkeleton} /></div>
+          <Skeleton className={styles.editorActionSkeleton} />
+        </header>
+        <div className={styles.editorLayout} aria-hidden="true">
+          <aside className={styles.versionPanel}><div className={styles.versionHeading}><Skeleton className={styles.headingSkeleton} /><Skeleton className={styles.countSkeleton} /></div><div className={styles.skeletonVersions}>{Array.from({ length: 4 }, (_, index) => <Skeleton className={styles.versionSkeleton} key={index} />)}</div></aside>
+          <div className={styles.editor}><div className={styles.editorTopbar}><Skeleton className={styles.headingSkeleton} /><Skeleton className={styles.toolbarSkeleton} /></div><div className={styles.editorBodySkeleton}>{Array.from({ length: 9 }, (_, index) => <Skeleton className={styles.codeSkeleton} key={index} />)}</div><div className={styles.editorFooter}><Skeleton className={styles.footerSkeleton} /><Skeleton className={styles.toolbarSkeleton} /></div></div>
+        </div>
+      </section>
+    );
   }
 
   return (

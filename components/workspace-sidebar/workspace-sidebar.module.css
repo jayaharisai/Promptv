@@ -147,6 +147,12 @@
   text-transform: lowercase;
 }
 
+.workspaceSkeleton { width: 94px; height: 13px; }
+
+.workspaceListSkeleton { display: grid; gap: 8px; padding: 8px; }
+
+.workspaceListSkeleton span { height: 28px; }
+
 .chevron {
   color: rgba(242, 240, 235, 0.64);
   width: 14px;

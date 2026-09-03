@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { DiscardNotice } from '../discard-notice';
+import { Skeleton } from '../skeleton';
 import styles from './prompts.module.css';
 
 type Folder = {
@@ -27,11 +28,8 @@ type Prompt = {
 };
 
 const folders: Folder[] = [];
-const folderTokenUsage: Record<string, { day: string; tokens: number }[]> = {};
-
 const minimumFolderNameLength = 3;
 const minimumFolderDescriptionLength = 20;
-
 function FolderIcon() {
   return (
     <span className={styles.folderIcon} aria-hidden="true">
@@ -48,15 +46,37 @@ function PromptIcon() {
   );
 }
 
+function MetricIcon({ type }: { type: 'folders' | 'prompts' | 'activity' }) {
+  const paths = {
+    folders: <path d="M2.5 4.5h4l1.15 1.35h5.85v6.65c0 .83-.67 1.5-1.5 1.5H4c-.83 0-1.5-.67-1.5-1.5z" />,
+    prompts: <><path d="M4.5 2.25h4.15l2.85 2.85v8.65H4.5c-.83 0-1.5-.67-1.5-1.5v-8.5c0-.83.67-1.5 1.5-1.5Z" /><path d="M8.5 2.5v3h3M5.7 8h4.6M5.7 10.4h4.6" /></>,
+    activity: <path d="M2.5 8h2l1.2-3 2.3 6 1.6-4h3.9" />,
+  };
+
+  return <span className={styles.metricIcon} aria-hidden="true"><svg viewBox="0 0 16 16" fill="none">{paths[type]}</svg></span>;
+}
+
 type PromptsProps = {
   folderSlug?: string;
 };
+
+function truncateText(value: string, limit: number) {
+  if (value.length <= limit) return value;
+  return `${value.slice(0, Math.max(0, limit - 1)).trimEnd()}…`;
+}
+
+function formatPromptCount(count: number) {
+  return `${count} prompt${count === 1 ? '' : 's'}`;
+}
 
 export function Prompts({ folderSlug }: PromptsProps) {
   const router = useRouter();
   const [folderList, setFolderList] = useState(folders);
   const [workspaceId, setWorkspaceId] = useState('');
   const [promptList, setPromptList] = useState<Prompt[]>([]);
+  const [folderPromptCounts, setFolderPromptCounts] = useState<Record<string, number>>({});
+  const [isLoadingFolders, setIsLoadingFolders] = useState(true);
+  const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
   const [folderName, setFolderName] = useState('');
@@ -66,10 +86,7 @@ export function Prompts({ folderSlug }: PromptsProps) {
   const [isSavingFolder, setIsSavingFolder] = useState(false);
   const selectedFolder = folderList.find((folder) => folder.id === folderSlug) ?? null;
   const folderPrompts = selectedFolder ? promptList : [];
-  const tokenUsage = selectedFolder ? folderTokenUsage[selectedFolder.name] ?? [] : [];
-  const maxTokens = Math.max(...tokenUsage.map((item) => item.tokens), 1);
-  const todayTokens = tokenUsage.at(-1)?.tokens ?? 0;
-  const totalPromptCount = 0;
+  const totalPromptCount = Object.values(folderPromptCounts).reduce((total, count) => total + count, 0);
   const folderNameLength = folderName.length;
   const folderDescriptionLength = folderDescription.length;
   const canCreateFolder =
@@ -91,6 +108,7 @@ export function Prompts({ folderSlug }: PromptsProps) {
   useEffect(() => {
     if (!selectedFolder) {
       setPromptList([]);
+      setIsLoadingPrompts(false);
       return;
     }
 
@@ -100,12 +118,14 @@ export function Prompts({ folderSlug }: PromptsProps) {
   async function loadFolders() {
     setFolderList([]);
     setFolderError('');
+    setIsLoadingFolders(true);
     const [workspacesResponse, activeWorkspaceResponse] = await Promise.all([
       fetch('/api/workspaces', { cache: 'no-store' }).catch(() => null),
       fetch('/api/workspaces/active', { cache: 'no-store' }).catch(() => null),
     ]);
     if (!workspacesResponse?.ok) {
       setFolderError('Unable to load folders. Start the API service and try again.');
+      setIsLoadingFolders(false);
       return;
     }
 
@@ -117,6 +137,7 @@ export function Prompts({ folderSlug }: PromptsProps) {
 
     if (!currentWorkspaceId) {
       setFolderError('Create a workspace before creating folders.');
+      setIsLoadingFolders(false);
       return;
     }
 
@@ -128,18 +149,31 @@ export function Prompts({ folderSlug }: PromptsProps) {
     const foldersResponse = await fetch(`/api/workspaces/${currentWorkspaceId}/folders`, { cache: 'no-store' }).catch(() => null);
     if (!foldersResponse?.ok) {
       setFolderError('Unable to load folders. Start the API service and try again.');
+      setIsLoadingFolders(false);
       return;
     }
-    setFolderList(await foldersResponse.json() as Folder[]);
+    const loadedFolders = await foldersResponse.json() as Folder[];
+    setFolderList(loadedFolders);
+
+    const promptCounts = await Promise.all(loadedFolders.map(async (folder) => {
+      const response = await fetch(`/api/folders/${folder.id}/prompts`, { cache: 'no-store' }).catch(() => null);
+      const prompts = response?.ok ? await response.json() as Prompt[] : [];
+      return [folder.id, prompts.length] as const;
+    }));
+    setFolderPromptCounts(Object.fromEntries(promptCounts));
+    setIsLoadingFolders(false);
   }
 
   async function loadPrompts(folderId: string) {
+    setIsLoadingPrompts(true);
     const response = await fetch(`/api/folders/${folderId}/prompts`, { cache: 'no-store' }).catch(() => null);
     if (!response?.ok) {
       setFolderError('Unable to load prompts. Start the API service and try again.');
+      setIsLoadingPrompts(false);
       return;
     }
     setPromptList(await response.json() as Prompt[]);
+    setIsLoadingPrompts(false);
   }
 
   function resetFolderForm() {
@@ -198,6 +232,10 @@ export function Prompts({ folderSlug }: PromptsProps) {
       return;
     }
     setFolderList((current) => current.filter((item) => item.id !== folder.id));
+    setFolderPromptCounts((current) => {
+      const { [folder.id]: _deletedCount, ...remaining } = current;
+      return remaining;
+    });
   }
 
   async function deletePrompt(prompt: Prompt) {
@@ -208,6 +246,10 @@ export function Prompts({ folderSlug }: PromptsProps) {
       return;
     }
     setPromptList((current) => current.filter((item) => item.id !== prompt.id));
+    setFolderPromptCounts((current) => ({
+      ...current,
+      [prompt.folder_id]: Math.max(0, (current[prompt.folder_id] ?? 1) - 1),
+    }));
   }
 
   function requestCloseCreateFolder() {
@@ -250,18 +292,41 @@ export function Prompts({ folderSlug }: PromptsProps) {
       {!selectedFolder ? (
         <>
           <div className={styles.overview}>
-            <div><span>Folders</span><strong>{folderList.length}</strong></div>
-            <div><span>All prompts</span><strong>{totalPromptCount}</strong></div>
-            <div><span>Recently used</span><strong>0</strong></div>
+            <div className={styles.metricCard}>
+              <MetricIcon type="folders" />
+              <span className={styles.metricLabel}>Folders</span>
+              {isLoadingFolders ? <Skeleton className={styles.metricValueSkeleton} /> : <strong>{folderList.length}</strong>}
+              <span className={styles.metricDetail}>Organised collections</span>
+            </div>
+            <div className={styles.metricCard}>
+              <MetricIcon type="prompts" />
+              <span className={styles.metricLabel}>All prompts</span>
+              {isLoadingFolders ? <Skeleton className={styles.metricValueSkeleton} /> : <strong>{totalPromptCount}</strong>}
+              <span className={styles.metricDetail}>Across this workspace</span>
+            </div>
+            <div className={styles.metricCard}>
+              <MetricIcon type="activity" />
+              <span className={styles.metricLabel}>Recently used</span>
+              {isLoadingFolders ? <Skeleton className={styles.metricValueSkeleton} /> : <strong>0</strong>}
+              <span className={styles.metricDetail}>Activity in the last 7 days</span>
+            </div>
           </div>
 
           <div className={styles.tablePanel}>
             <div className={styles.tableHeader}><p>All folders <span>{folderList.length}</span></p></div>
             <div className={styles.tableWrap}>
-              <table>
-                <thead><tr><th>Folder</th><th>Prompts</th><th>Recently used</th><th>Last updated</th><th aria-label="Actions" /></tr></thead>
+              <table className={styles.folderTable}>
+                <colgroup>
+                  <col className={styles.folderNameCol} />
+                  <col className={styles.folderCountCol} />
+                  <col className={styles.folderUpdatedCol} />
+                  <col className={styles.folderActionsCol} />
+                </colgroup>
+                <thead><tr><th>Folder</th><th>Prompts</th><th>Last updated</th><th className={styles.folderActions}>Actions</th></tr></thead>
                 <tbody>
-                  {folderList.length === 0 ? <tr><td className={styles.emptyState} colSpan={5}>No folders yet. Create your first folder to start organising prompts.</td></tr> : folderList.map((folder) => (
+                  {isLoadingFolders ? Array.from({ length: 4 }, (_, index) => (
+                    <tr key={`folder-skeleton-${index}`} aria-hidden="true"><td><div className={styles.folderSkeleton}><Skeleton className={styles.iconSkeleton} /><Skeleton className={styles.nameSkeleton} /></div></td><td><Skeleton className={styles.cellSkeleton} /></td><td><Skeleton className={styles.cellSkeleton} /></td><td><Skeleton className={styles.actionsSkeleton} /></td></tr>
+                  )) : folderList.length === 0 ? <tr><td className={styles.emptyState} colSpan={4}>No folders yet. Create your first folder to start organising prompts.</td></tr> : folderList.map((folder) => (
                     <tr
                       key={folder.id}
                       className={styles.clickableRow}
@@ -275,15 +340,21 @@ export function Prompts({ folderSlug }: PromptsProps) {
                       tabIndex={0}
                     >
                       <td>
-                        <Link href={`/prompts/${folder.id}`} className={styles.folderButton}>
+                        <button
+                          type="button"
+                          className={styles.folderButton}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            router.push(`/prompts/${folder.id}`);
+                          }}
+                        >
                           <FolderIcon />
                           <span><strong>{folder.name}</strong><small>{folder.description}</small></span>
-                        </Link>
+                        </button>
                       </td>
-                      <td><span className={styles.count}>0 prompts</span></td>
-                      <td className={styles.recent}>--</td>
+                      <td><span className={styles.count}>{formatPromptCount(folderPromptCounts[folder.id] ?? 0)}</span></td>
                       <td className={styles.updated}>{new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(new Date(folder.updated_at))}</td>
-                      <td><div className={styles.actions}><button type="button" className={styles.actionButton} onClick={(event) => { event.stopPropagation(); openEditFolder(folder); }}>Edit</button><button type="button" className={styles.deleteButton} onClick={(event) => { event.stopPropagation(); void deleteFolder(folder); }}>Delete</button></div></td>
+                      <td className={styles.folderActions}><div className={styles.actions}><button type="button" className={styles.actionButton} onClick={(event) => { event.stopPropagation(); openEditFolder(folder); }}>Edit</button><button type="button" className={styles.deleteButton} onClick={(event) => { event.stopPropagation(); void deleteFolder(folder); }}>Delete</button></div></td>
                     </tr>
                   ))}
                 </tbody>
@@ -295,29 +366,42 @@ export function Prompts({ folderSlug }: PromptsProps) {
         <>
           <section className={styles.folderMetrics} aria-label={`${selectedFolder.name} token usage`}>
             <div className={styles.metricsHeader}>
-              <div><p>System prompt tokens</p><strong>{todayTokens.toLocaleString()}</strong><span>used today</span></div>
-              <span className={styles.metricsRange}>Last 7 days</span>
+              <div>
+                <p>System prompt tokens</p>
+                <strong>No activity yet</strong>
+                <span>Usage will appear here once prompts are run.</span>
+              </div>
             </div>
-            <div className={styles.barChart}>
-              {tokenUsage.map((item) => (
-                <div className={styles.barColumn} key={item.day}>
-                  <span className={styles.barValue}>{(item.tokens / 1000).toFixed(1)}k</span>
-                  <div className={styles.barTrack}>
-                    <span className={styles.bar} style={{ height: `${(item.tokens / maxTokens) * 100}%` }} />
-                  </div>
-                  <span className={styles.barLabel}>{item.day}</span>
-                </div>
-              ))}
+            <div className={styles.chartEmpty}>
+              <span aria-hidden="true" />
+              <p>No usage has been recorded for this folder.</p>
             </div>
           </section>
 
           <div className={styles.tablePanel}>
             <div className={styles.tableHeader}><p>{selectedFolder.name} prompts <span>{folderPrompts.length}</span></p></div>
             <div className={styles.tableWrap}>
-              <table>
-              <thead><tr><th>Prompt</th><th>Version</th><th>Recently used</th><th>Updated</th><th>Status</th><th aria-label="Actions" /></tr></thead>
+              <table className={styles.promptTable}>
+                <colgroup>
+                  <col className={styles.promptCol} />
+                  <col className={styles.versionCol} />
+                  <col className={styles.updatedCol} />
+                  <col className={styles.statusCol} />
+                  <col className={styles.actionsCol} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Prompt</th>
+                    <th>Version</th>
+                    <th>Updated</th>
+                    <th>Status</th>
+                    <th className={styles.promptActions}>Actions</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {folderPrompts.length === 0 ? <tr><td className={styles.emptyState} colSpan={6}>No prompts in this folder yet. Create a prompt when you are ready.</td></tr> : folderPrompts.map((prompt) => (
+                  {isLoadingPrompts ? Array.from({ length: 5 }, (_, index) => (
+                    <tr key={`prompt-skeleton-${index}`} aria-hidden="true"><td><div className={styles.folderSkeleton}><Skeleton className={styles.iconSkeleton} /><Skeleton className={styles.nameSkeleton} /></div></td><td><Skeleton className={styles.cellSkeleton} /></td><td><Skeleton className={styles.cellSkeleton} /></td><td><Skeleton className={styles.cellSkeleton} /></td><td><Skeleton className={styles.actionsSkeleton} /></td></tr>
+                  )) : folderPrompts.length === 0 ? <tr><td className={styles.emptyState} colSpan={5}>No prompts in this folder yet. Create a prompt when you are ready.</td></tr> : folderPrompts.map((prompt) => (
                     <tr
                       key={prompt.name}
                       className={styles.clickableRow}
@@ -330,12 +414,19 @@ export function Prompts({ folderSlug }: PromptsProps) {
                       }}
                       tabIndex={0}
                     >
-                      <td><div className={styles.promptInfo}><PromptIcon /><span><strong>{prompt.name}</strong><small>{prompt.description}</small></span></div></td>
+                      <td>
+                        <div className={styles.promptInfo}>
+                          <PromptIcon />
+                          <span>
+                            <strong title={prompt.name}>{truncateText(prompt.name, 28)}</strong>
+                            <small title={prompt.description}>{truncateText(prompt.description, 42)}</small>
+                          </span>
+                        </div>
+                      </td>
                       <td><span className={styles.version}>{prompt.active_version_id ? 'Active' : '--'}</span></td>
-                      <td className={styles.recent}>--</td>
                       <td className={styles.updated}>{new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(new Date(prompt.updated_at))}</td>
                       <td><span className={prompt.status === 'published' ? styles.published : styles.draft}>{prompt.status}</span></td>
-                      <td>
+                      <td className={styles.promptActions}>
                         <div className={styles.actions}>
                           <Link href={`/prompts/${selectedFolder.id}/${prompt.id}`} className={styles.actionButton}>Edit</Link>
                           <Link href={`/prompts/${selectedFolder.id}/${prompt.id}`} className={styles.actionButton}>Version it</Link>

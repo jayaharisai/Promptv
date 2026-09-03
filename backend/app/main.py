@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from .config import get_settings
 from .database import Base, engine
 from .models import Workspace
-from .routers import folders, prompts, workspaces
+from .routers import access_keys, folders, prompts, sdk, workspaces
 from .schemas import StatusRead
 
 
@@ -44,3 +44,5 @@ def read_status() -> StatusRead:
 app.include_router(workspaces.router, prefix="/api/v1")
 app.include_router(folders.router, prefix="/api/v1")
 app.include_router(prompts.router, prefix="/api/v1")
+app.include_router(access_keys.router, prefix="/api/v1")
+app.include_router(sdk.router, prefix="/api/v1")

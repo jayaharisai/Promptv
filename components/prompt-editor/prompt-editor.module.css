@@ -1,5 +1,9 @@
 .page { display: flex; flex-direction: column; height: 100vh; min-height: 640px; margin-left: var(--workspace-content-offset); padding: 52px 40px 40px; transition: margin-left 300ms cubic-bezier(0.16, 1, 0.3, 1); }
 .header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
+.editorSkeletonHeader { display: grid; gap: 11px; width: min(100%, 420px); }
+.breadcrumbSkeleton { width: 135px; height: 11px; }
+.inputSkeleton { width: 100%; height: 34px; }
+.editorActionSkeleton { width: 182px; height: 34px; }
 .breadcrumb { margin: 0 0 9px; color: rgba(242, 240, 235, 0.44); font-size: 11px; }
 .breadcrumb span { margin: 0 5px; color: rgba(242, 240, 235, 0.25); }
 .header h1 { margin: 0; color: #f7f6f2; font-size: 26px; font-weight: 500; letter-spacing: -0.055em; }
@@ -29,6 +33,10 @@
 .versionPanel { display: flex; flex-direction: column; min-height: 0; }
 .versionHeading { display: flex; justify-content: space-between; padding: 13px; border-bottom: 1px solid rgba(242, 240, 235, 0.08); color: rgba(242, 240, 235, 0.48); font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; }
 .versionList { padding: 6px; }
+.skeletonVersions { display: grid; gap: 8px; padding: 10px; }
+.headingSkeleton { width: 58px; height: 10px; }
+.countSkeleton { width: 16px; height: 10px; }
+.versionSkeleton { width: 100%; height: 54px; }
 .versionButton, .versionActive { display: grid; gap: 5px; width: 100%; padding: 10px; border: 0; border-radius: 4px; background: transparent; color: inherit; text-align: left; cursor: pointer; }
 .versionActive { background: rgba(242, 240, 235, 0.075); }
 .versionButton > span, .versionActive > span { display: flex; align-items: center; justify-content: space-between; }
@@ -43,6 +51,12 @@
 .editor { position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; overflow: hidden; }
 .editorTopbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid rgba(242, 240, 235, 0.08); color: rgba(242, 240, 235, 0.45); font-size: 10px; }
 .editorTopbar div { display: flex; gap: 8px; }
+.toolbarSkeleton { width: 74px; height: 10px; }
+.editorBodySkeleton { display: grid; align-content: start; gap: 12px; padding: 20px 18px; }
+.codeSkeleton { width: 88%; height: 11px; }
+.codeSkeleton:nth-child(3n) { width: 58%; }
+.codeSkeleton:nth-child(4n) { width: 72%; }
+.footerSkeleton { width: 155px; height: 10px; }
 .editorTopbar small { color: var(--accent); font-size: 10px; }
 .textarea { width: 100%; min-height: 0; height: 100%; padding: 18px; border: 0; outline: 0; resize: none; background: transparent; color: #dedbd4; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace; font-size: 12px; line-height: 1.75; }
 .editorFooter { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 14px; border-top: 1px solid rgba(242, 240, 235, 0.08); color: rgba(242, 240, 235, 0.45); font-size: 10px; }
