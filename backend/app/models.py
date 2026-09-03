@@ -74,3 +74,21 @@ class AccessKey(Base):
     request_count: Mapped[int] = mapped_column(default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
+    access_key_id: Mapped[str] = mapped_column(ForeignKey("access_keys.id", ondelete="SET NULL"), nullable=True, index=True)
+    access_key_name: Mapped[str] = mapped_column(String(32))
+    action: Mapped[str] = mapped_column(String(32))
+    resource_type: Mapped[str] = mapped_column(String(16))
+    resource_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    folder_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    prompt_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    integration: Mapped[str] = mapped_column(String(48), default="Direct API")
+    system_prompt_tokens: Mapped[int | None] = mapped_column(nullable=True)
+    status_code: Mapped[int] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)

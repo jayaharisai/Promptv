@@ -22,9 +22,27 @@
 .metricsHeader p { display: flex; align-items: center; gap: 7px; margin: 0 0 6px; color: rgba(242, 240, 235, 0.52); font-size: 10px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; }
 .metricsHeader strong { color: #f7f6f2; font-size: 25px; font-weight: 500; letter-spacing: -0.05em; }
 .metricsHeader div > span { margin-left: 7px; color: rgba(242, 240, 235, 0.42); font-size: 10px; }
+.usageControls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.usageControls button, .usageControls label { border: 1px solid rgba(242, 240, 235, 0.1); border-radius: 3px; background: transparent; color: rgba(242, 240, 235, 0.62); font-size: 10px; }
+.usageControls button { padding: 6px 8px; cursor: pointer; }
+.usageControls button.usageActive { border-color: var(--accent); color: var(--accent); }
+.usageControls label { display: flex; align-items: center; gap: 5px; padding-left: 7px; }
+.usageControls input { width: 108px; padding: 5px; border: 0; outline: 0; background: transparent; color: #f2f0eb; font: inherit; color-scheme: dark; }
 .chartEmpty { display: grid; min-height: 132px; place-items: center; margin-top: 20px; border-top: 1px solid rgba(242, 240, 235, 0.07); color: rgba(242, 240, 235, 0.4); }
 .chartEmpty span { width: min(260px, 72%); height: 40px; border: 1px solid rgba(242, 240, 235, 0.09); border-bottom: 0; background: repeating-linear-gradient(90deg, transparent 0 17px, rgba(242, 240, 235, 0.06) 17px 18px); clip-path: polygon(0 100%, 20% 74%, 36% 84%, 54% 41%, 74% 64%, 100% 12%, 100% 100%); opacity: 0.65; }
 .chartEmpty p { margin: -14px 0 0; font-size: 11px; }
+.lineChart { margin-top: 20px; padding-top: 14px; border-top: 1px solid rgba(242, 240, 235, 0.07); }
+.lineChart svg { display: block; width: 100%; height: 132px; overflow: visible; }
+.chartGrid { fill: none; stroke: rgba(242, 240, 235, 0.1); stroke-width: 1; }
+.chartArea { fill: color-mix(in srgb, var(--accent) 14%, transparent); }
+.chartLine { fill: none; stroke: var(--accent); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; }
+.lineChart circle { fill: #171a20; stroke: var(--accent); stroke-width: 2; }
+.lineChart > span { color: rgba(242, 240, 235, 0.4); font-size: 10px; }
+.lineChart > span:last-child { float: right; }
+.barChart { display: flex; align-items: end; gap: 5px; height: 132px; margin-top: 20px; padding-top: 14px; border-top: 1px solid rgba(242, 240, 235, 0.07); }
+.barChart > div { display: flex; flex: 1; min-width: 28px; height: 100%; flex-direction: column; justify-content: end; gap: 5px; }
+.barChart span { display: block; width: 100%; min-width: 4px; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 35%, transparent)); }
+.barChart small { overflow: hidden; color: rgba(242, 240, 235, 0.42); font-size: 9px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .tablePanel { width: 100%; overflow: hidden; border: 1px solid rgba(242, 240, 235, 0.09); border-radius: 5px; background: rgba(242, 240, 235, 0.015); }
 .tableHeader { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 13px; border-bottom: 1px solid rgba(242, 240, 235, 0.08); }
 .tableHeader p { margin: 0; color: rgba(242, 240, 235, 0.67); font-size: 12px; }

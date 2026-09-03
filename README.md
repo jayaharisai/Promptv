@@ -125,6 +125,10 @@ except PromptvError as error:
 
 `get_prompt(folder, prompt)` always returns the currently selected active version, so applications see a new version as soon as it is activated in Promptv. Draft and archived prompts are intentionally unavailable. The SDK sends the key as `Authorization: Bearer <key>`; direct integrations may instead use an `X-API-Key` header.
 
+Every authenticated SDK request is recorded in **Audit Logs**, including the access key name, requested folder or prompt, status, and timestamp. The page receives new events over a WebSocket and offers database-backed pagination for older entries.
+
+For active-prompt requests, Promptv counts the system prompt using the `cl100k_base` tokenizer and stores that count with the audit event. The Python SDK automatically identifies LangGraph, LangChain, and LlamaIndex when one is installed; otherwise it records `Python SDK`. Folder pages chart this stored token history.
+
 ## Testing
 
 Run the backend suite through Docker:

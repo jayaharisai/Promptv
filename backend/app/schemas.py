@@ -169,3 +169,35 @@ class SDKPromptRead(BaseModel):
     version: int
     content: str
     updated_at: datetime
+
+
+class AuditLogRead(BaseModel):
+    id: str
+    workspace_id: str
+    access_key_id: str | None
+    access_key_name: str
+    action: str
+    resource_type: str
+    resource_name: str | None
+    status_code: int
+    folder_id: str | None
+    prompt_id: str | None
+    integration: str
+    system_prompt_tokens: int | None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AuditLogPage(BaseModel):
+    items: list[AuditLogRead]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
+
+
+class FolderTokenUsageRead(BaseModel):
+    total_requests: int
+    total_system_prompt_tokens: int
+    events: list[AuditLogRead]

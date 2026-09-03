@@ -6,6 +6,7 @@ Only published active prompt versions are available through this client.
 from __future__ import annotations
 
 import json
+from importlib.util import find_spec
 from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -46,12 +47,20 @@ class Promptv:
         timeout: Per-request timeout in seconds.
     """
 
-    def __init__(self, api_key: str, base_url: str = "http://localhost:8000", timeout: float = 10) -> None:
+    def __init__(self, api_key: str, base_url: str = "http://localhost:8000", timeout: float = 10, integration: str | None = None) -> None:
         if not api_key:
             raise ValueError("api_key is required")
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.integration = integration or self._detect_integration()
+
+    @staticmethod
+    def _detect_integration() -> str:
+        for module, name in (("langgraph", "LangGraph"), ("langchain", "LangChain"), ("llama_index", "LlamaIndex")):
+            if find_spec(module) is not None:
+                return name
+        return "Python SDK"
 
     def list_folders(self) -> list[Folder]:
         """List folders accessible with this access key."""
@@ -65,7 +74,7 @@ class Promptv:
     def _get(self, path: str) -> Any:
         request = Request(
             f"{self.base_url}{path}",
-            headers={"Authorization": f"Bearer {self.api_key}", "Accept": "application/json"},
+            headers={"Authorization": f"Bearer {self.api_key}", "Accept": "application/json", "X-Promptv-Integration": self.integration},
             method="GET",
         )
         try:

@@ -26,6 +26,7 @@ type Prompt = {
   created_at: string;
   updated_at: string;
 };
+type TokenUsage = { total_requests: number; total_system_prompt_tokens: number; events: { id: string; system_prompt_tokens: number | null; created_at: string; integration: string }[] };
 
 const folders: Folder[] = [];
 const minimumFolderNameLength = 3;
@@ -77,6 +78,10 @@ export function Prompts({ folderSlug }: PromptsProps) {
   const [folderPromptCounts, setFolderPromptCounts] = useState<Record<string, number>>({});
   const [isLoadingFolders, setIsLoadingFolders] = useState(true);
   const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
+  const [tokenUsage, setTokenUsage] = useState<TokenUsage | null>(null);
+  const [usageRange, setUsageRange] = useState<'live' | '7' | '14' | '30' | 'custom'>('live');
+  const [usageFrom, setUsageFrom] = useState('');
+  const [usageTo, setUsageTo] = useState('');
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
   const [folderName, setFolderName] = useState('');
@@ -93,6 +98,23 @@ export function Prompts({ folderSlug }: PromptsProps) {
     folderName.trim().length >= minimumFolderNameLength &&
     folderDescription.trim().length >= minimumFolderDescriptionLength;
   const isFolderFormDirty = folderName.trim().length > 0 || folderDescription.trim().length > 0;
+  const chartEvents = tokenUsage?.events ?? [];
+  const chartMaximum = Math.max(...chartEvents.map((event) => event.system_prompt_tokens ?? 0), 1);
+  const chartPoints = chartEvents.map((event, index) => ({
+    x: chartEvents.length === 1 ? 20 : 20 + (index / (chartEvents.length - 1)) * 460,
+    y: 116 - ((event.system_prompt_tokens ?? 0) / chartMaximum) * 92,
+  }));
+  const chartPath = chartPoints.reduce((path, point, index) => {
+    if (index === 0) return `M ${point.x} ${point.y}`;
+    const previous = chartPoints[index - 1];
+    return `${path} Q ${(previous.x + point.x) / 2} ${previous.y}, ${point.x} ${point.y}`;
+  }, '');
+  const dailyTokenUsage = Object.values(chartEvents.reduce<Record<string, { date: string; tokens: number }>>((days, event) => {
+    const date = new Date(event.created_at).toLocaleDateString('en', { month: 'short', day: 'numeric' });
+    days[date] = { date, tokens: (days[date]?.tokens ?? 0) + (event.system_prompt_tokens ?? 0) };
+    return days;
+  }, {}));
+  const dailyMaximum = Math.max(...dailyTokenUsage.map((day) => day.tokens), 1);
 
   useEffect(() => {
     void loadFolders();
@@ -108,12 +130,31 @@ export function Prompts({ folderSlug }: PromptsProps) {
   useEffect(() => {
     if (!selectedFolder) {
       setPromptList([]);
+      setTokenUsage(null);
       setIsLoadingPrompts(false);
       return;
     }
 
     void loadPrompts(selectedFolder.id);
-  }, [selectedFolder?.id]);
+    void loadTokenUsage(selectedFolder.id);
+    const refreshTokenUsage = window.setInterval(() => void loadTokenUsage(selectedFolder.id), 5_000);
+    return () => window.clearInterval(refreshTokenUsage);
+  }, [selectedFolder?.id, usageRange, usageFrom, usageTo]);
+
+  async function loadTokenUsage(folderId: string) {
+    const today = new Date();
+    const to = usageRange === 'custom' ? usageTo : today.toISOString().slice(0, 10);
+    const fromDate = new Date(today);
+    fromDate.setDate(today.getDate() - Number(usageRange === 'live' || usageRange === 'custom' ? 0 : usageRange) + 1);
+    const from = usageRange === 'live' ? '' : usageRange === 'custom' ? usageFrom : fromDate.toISOString().slice(0, 10);
+    const search = from && to ? `?start=${encodeURIComponent(`${from}T00:00:00Z`)}&end=${encodeURIComponent(`${to}T23:59:59Z`)}` : '';
+    const response = await fetch(`/api/folders/${folderId}/token-usage${search}`, { cache: 'no-store' }).catch(() => null);
+    setTokenUsage(response?.ok ? await response.json() as TokenUsage : null);
+  }
+
+  function chooseUsageRange(range: '7' | '14' | '30') {
+    setUsageRange(range);
+  }
 
   async function loadFolders() {
     setFolderList([]);
@@ -368,14 +409,17 @@ export function Prompts({ folderSlug }: PromptsProps) {
             <div className={styles.metricsHeader}>
               <div>
                 <p>System prompt tokens</p>
-                <strong>No activity yet</strong>
-                <span>Usage will appear here once prompts are run.</span>
+                <strong>{tokenUsage ? tokenUsage.total_system_prompt_tokens.toLocaleString() : 0}</strong>
+                <span>tokens across {tokenUsage?.total_requests ?? 0} prompt fetches</span>
+              </div>
+              <div className={styles.usageControls}>
+                <button type="button" className={usageRange === 'live' ? styles.usageActive : undefined} onClick={() => setUsageRange('live')}>Live</button>
+                {(['7', '14', '30'] as const).map((range) => <button key={range} type="button" className={usageRange === range ? styles.usageActive : undefined} onClick={() => chooseUsageRange(range)}>{range} days</button>)}
+                <label>From <input type="date" value={usageFrom} onChange={(event) => { setUsageFrom(event.target.value); setUsageRange('custom'); }} /></label>
+                <label>To <input type="date" value={usageTo} onChange={(event) => { setUsageTo(event.target.value); setUsageRange('custom'); }} /></label>
               </div>
             </div>
-            <div className={styles.chartEmpty}>
-              <span aria-hidden="true" />
-              <p>No usage has been recorded for this folder.</p>
-            </div>
+            {chartPoints.length ? usageRange === 'live' ? <div className={styles.lineChart} aria-label="Live system prompt token history"><svg viewBox="0 0 500 132" role="img"><path className={styles.chartGrid} d="M20 24H480M20 70H480M20 116H480" /><path className={styles.chartArea} d={`${chartPath} L 480 116 L 20 116 Z`} /><path className={styles.chartLine} d={chartPath} />{chartPoints.map((point, index) => <circle key={chartEvents[index].id} cx={point.x} cy={point.y} r="3"><title>{`${chartEvents[index].system_prompt_tokens ?? 0} tokens`}</title></circle>)}</svg><span>{chartEvents[0] ? new Date(chartEvents[0].created_at).toLocaleDateString() : ''}</span><span>{chartEvents.at(-1) ? new Date(chartEvents.at(-1)!.created_at).toLocaleDateString() : ''}</span></div> : <div className={styles.barChart} aria-label="Daily system prompt tokens for selected period">{dailyTokenUsage.map((day) => <div key={day.date}><span title={`${day.date}: ${day.tokens} tokens`} style={{ height: `${Math.max(8, (day.tokens / dailyMaximum) * 100)}%` }} /><small>{day.date}</small></div>)}</div> : <div className={styles.chartEmpty}><span aria-hidden="true" /><p>No usage has been recorded for this date range.</p></div>}
           </section>
 
           <div className={styles.tablePanel}>
